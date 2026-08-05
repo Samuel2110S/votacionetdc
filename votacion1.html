@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Global Voting System</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 440px;
+      text-align: center;
+    }
+
+    .toggle-btn {
+      background: #4f46e5;
+      color: #ffffff;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .toggle-btn:hover {
+      background: #4338ca;
+    }
+
+    .poll-box {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .poll-title {
+      font-size: 18px;
+      color: #111827;
+      margin-bottom: 16px;
+    }
+
+    .option-card {
+      position: relative;
+      background: #ffffff;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: border-color 0.2s ease;
+    }
+
+    .option-card:hover:not(.disabled) {
+      border-color: #4f46e5;
+    }
+
+    .option-card.disabled {
+      cursor: default;
+    }
+
+    .progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background-color: #e0e7ff;
+      width: 0%;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1;
+    }
+
+    .option-label, .option-stats {
+      position: relative;
+      z-index: 2;
+      font-weight: 600;
+      font-size: 15px;
+      color: #1f2937;
+    }
+
+    .status-msg {
+      margin-top: 15px;
+      font-size: 13px;
+      color: #6b7280;
+      text-align: center;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Toggle Button -->
+    <button id="toggle-poll" class="toggle-btn">Open Voting System</button>
+
+    <!-- Poll Box -->
+    <div id="poll-box" class="poll-box hidden">
+      <h3 class="poll-title">Select your preferred stack:</h3>
+
+      <div class="option-card" data-id="opt1">
+        <div class="progress-bar" id="bar-opt1"></div>
+        <span class="option-label">JavaScript / Node.js</span>
+        <span class="option-stats hidden" id="stats-opt1">0% (0)</span>
+      </div>
+
+      <div class="option-card" data-id="opt2">
+        <div class="progress-bar" id="bar-opt2"></div>
+        <span class="option-label">Python / Django</span>
+        <span class="option-stats hidden" id="stats-opt2">0% (0)</span>
+      </div>
+
+      <div class="option-card" data-id="opt3">
+        <div class="progress-bar" id="bar-opt3"></div>
+        <span class="option-label">Go / Fiber</span>
+        <span class="option-stats hidden" id="stats-opt3">0% (0)</span>
+      </div>
+
+      <p id="status-message" class="status-msg"></p>
+    </div>
+  </div>
+
+  <script>
+    // System Keys for localStorage persistence
+    const STORAGE_KEY_VOTES = "system_poll_votes_v1";
+    const STORAGE_KEY_USER_VOTED = "system_poll_user_has_voted";
+
+    // Synchronization across open browser tabs
+    const syncChannel = new BroadcastChannel("poll_sync");
+
+    // Default vote state if clear
+    let pollData = JSON.parse(localStorage.getItem(STORAGE_KEY_VOTES)) || {
+      opt1: 12,
+      opt2: 8,
+      opt3: 5
+    };
+
+    // DOM Elements
+    const toggleBtn = document.getElementById("toggle-poll");
+    const pollBox = document.getElementById("poll-box");
+    const optionCards = document.querySelectorAll(".option-card");
+    const statusMsg = document.getElementById("status-message");
+
+    // 1. Show/Hide Poll Trigger
+    toggleBtn.addEventListener("click", () => {
+      const isHidden = pollBox.classList.contains("hidden");
+      if (isHidden) {
+        pollBox.classList.remove("hidden");
+        toggleBtn.textContent = "Close Voting System";
+        updateView();
+      } else {
+        pollBox.classList.add("hidden");
+        toggleBtn.textContent = "Open Voting System";
+      }
+    });
+
+    // 2. Voting Action Handler
+    optionCards.forEach(card => {
+      card.addEventListener("click", () => {
+        const hasVoted = localStorage.getItem(STORAGE_KEY_USER_VOTED);
+        
+        // Block double voting
+        if (hasVoted) return;
+
+        const selectedOption = card.getAttribute("data-id");
+        
+        // Update local dataset
+        pollData[selectedOption]++;
+        
+        // Save to browser memory
+        localStorage.setItem(STORAGE_KEY_VOTES, JSON.stringify(pollData));
+        localStorage.setItem(STORAGE_KEY_USER_VOTED, "true");
+
+        // Broadcast change to other open tabs
+        syncChannel.postMessage(pollData);
+
+        // Refresh UI
+        updateView();
+      });
+    });
+
+    // 3. Listen for changes from other tabs
+    syncChannel.onmessage = (event) => {
+      pollData = event.data;
+      updateView();
+    };
+
+    // 4. Update Percentages and Lock State UI
+    function updateView() {
+      const hasVoted = localStorage.getItem(STORAGE_KEY_USER_VOTED);
+      const totalVotes = pollData.opt1 + pollData.opt2 + pollData.opt3;
+
+      Object.keys(pollData).forEach(optId => {
+        const votes = pollData[optId];
+        const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+
+        const progressBar = document.getElementById(`bar-${optId}`);
+        const statsText = document.getElementById(`stats-${optId}`);
+
+        if (hasVoted) {
+          // Display statistics and expand bars
+          progressBar.style.width = `${percentage}%`;
+          statsText.textContent = `${percentage}% (${votes})`;
+          statsText.classList.remove("hidden");
+        }
+      });
+
+      // Handle locking if already voted
+      if (hasVoted) {
+        optionCards.forEach(card => card.classList.add("disabled"));
+        statusMsg.textContent = "You have already voted. Double voting is disallowed.";
+      } else {
+        statusMsg.textContent = "Click an option above to cast your vote.";
+      }
+    }
+  </script>
+</body>
+</html>
