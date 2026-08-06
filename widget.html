@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Embeddable Voting Widget</title>
+  <title>El taller del chocolate - Elecciones de productos</title>
   <style>
     * {
       box-sizing: border-box;
@@ -13,7 +13,7 @@
     }
 
     body {
-      background: #ffffff;
+      background: #000000;
       padding: 16px;
     }
 
@@ -21,13 +21,13 @@
       border: 1px solid #e5e7eb;
       border-radius: 10px;
       padding: 16px;
-      background: #fafafa;
+      background: #000000;
     }
 
     .poll-title {
       font-size: 16px;
       font-weight: 700;
-      color: #111827;
+      color: #d4a373;
       margin-bottom: 12px;
     }
 
@@ -47,7 +47,7 @@
     }
 
     .option-btn:hover:not(.disabled) {
-      border-color: #4f46e5;
+      border-color: #d4a373;
     }
 
     .option-btn.disabled {
@@ -59,7 +59,7 @@
       top: 0;
       left: 0;
       height: 100%;
-      background: #e0e7ff;
+      background: #d4a373;
       width: 0%;
       transition: width 0.4s ease;
       z-index: 1;
@@ -70,13 +70,13 @@
       z-index: 2;
       font-size: 14px;
       font-weight: 600;
-      color: #1f2937;
+      color: #d4a373;
     }
 
     .status-msg {
       margin-top: 10px;
       font-size: 12px;
-      color: #6b7280;
+      color: #d4a373;
       text-align: center;
     }
 
@@ -88,35 +88,33 @@
 <body>
 
   <div class="widget-box">
-    <h4 class="poll-title">Which framework do you prefer?</h4>
+    <h4 class="poll-title">Votación de productos de El taller del chocolate.</h4>
 
     <div class="option-btn" data-id="opt1">
       <div class="progress-bar" id="bar-opt1"></div>
-      <span class="option-label">React</span>
+      <span class="option-label">Barra de chocolate combinado.</span>
       <span class="option-stats hidden" id="stats-opt1">0% (0)</span>
     </div>
 
     <div class="option-btn" data-id="opt2">
       <div class="progress-bar" id="bar-opt2"></div>
-      <span class="option-label">Vue</span>
+      <span class="option-label">Bola de chocolate negro.</span>
       <span class="option-stats hidden" id="stats-opt2">0% (0)</span>
     </div>
 
     <div class="option-btn" data-id="opt3">
       <div class="progress-bar" id="bar-opt3"></div>
-      <span class="option-label">Svelte</span>
+      <span class="option-label">Bola de chocolate blanco.</span>
       <span class="option-stats hidden" id="stats-opt3">0% (0)</span>
     </div>
 
-    <p id="status-msg" class="status-msg">Click an option to cast your vote.</p>
+    <p id="status-msg" class="status-msg">Elige un producto de tu gusto y haz click en el botón correspondiente para votar.</p>
   </div>
 
   <script>
-    // System Key for widget memory isolation
     const WIDGET_VOTE_KEY = "widget_user_has_voted";
     const WIDGET_DATA_KEY = "widget_global_poll_counts";
 
-    // Simulate central server database
     let globalData = JSON.parse(localStorage.getItem(WIDGET_DATA_KEY)) || {
       opt1: 0,
       opt2: 0,
@@ -126,21 +124,17 @@
     const options = document.querySelectorAll('.option-btn');
     const statusMsg = document.getElementById('status-msg');
 
-    // Handle vote click
     options.forEach(btn => {
       btn.addEventListener('click', () => {
         if (hasUserVoted()) return;
 
         const choice = btn.getAttribute('data-id');
         
-        // 1. Update server database
         globalData[choice]++;
         localStorage.setItem(WIDGET_DATA_KEY, JSON.stringify(globalData));
 
-        // 2. Lock user session (Prevents double voting)
         localStorage.setItem(WIDGET_VOTE_KEY, "true");
 
-        // 3. Re-render UI percentages
         renderWidgetUI();
       });
     });
